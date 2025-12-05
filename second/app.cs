@@ -12,6 +12,32 @@ ulong GetNumberFromPosition(string numberAsString, int start, int? end = null){
   return ulong.Parse(numberAsString.Substring(start, length));
 }
 
+static bool IsInvalidRepeatedPattern(string s)
+{
+    int n = s.Length;
+    if (n < 2) return false; // single digit can't be "repeated at least twice"
+
+    // Build LPS array (KMP prefix function)
+    int[] lps = new int[n];
+    int len = 0; // length of previous longest prefix suffix
+    for (int i = 1; i < n; i++)
+    {
+        while (len > 0 && s[i] != s[len])
+            len = lps[len - 1];
+
+        if (s[i] == s[len])
+            len++;
+
+        lps[i] = len;
+    }
+
+    int longestPrefixSuffix = lps[n - 1];
+    if (longestPrefixSuffix == 0) return false;
+
+    int period = n - longestPrefixSuffix;
+    return period < n && (n % period == 0);
+}
+
 using (TextFieldParser parser = new TextFieldParser(filePath))
 {
     parser.TextFieldType = FieldType.Delimited;
@@ -28,14 +54,7 @@ using (TextFieldParser parser = new TextFieldParser(filePath))
 
           for(var number = firstNumber; number <= secondNumber; number++){
             var s = number.ToString();
-
-            var halfPoint = s.Length / 2;
-            if (s.Length % 2 != 0) continue;
-
-            var firstHalf = GetNumberFromPosition(s, 0, halfPoint);
-            var secondHalf = GetNumberFromPosition(s, halfPoint);
-
-            if(firstHalf == secondHalf)
+            if(IsInvalidRepeatedPattern(s))
               total += number;
           }
         }
