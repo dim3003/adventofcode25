@@ -1,6 +1,4 @@
 using System;
-using Microsoft.VisualBasic.FileIO;
-
 string filePath = "data.csv";
 ulong total = 0;
 
