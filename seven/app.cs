@@ -2,35 +2,42 @@ var lines = File.ReadLines("data.txt")
                 .Where((line, index) => index % 2 == 0)
                 .ToList();
 
-var currentIndexes = new HashSet<int>
+// Dictionary to track how many timelines reach each column
+var currentCounts = new Dictionary<int, long>
 {
-    lines[0].IndexOf('S')
+    [lines[0].IndexOf('S')] = 1
 };
-
-int splitCount = 0;
 
 foreach (var line in lines.Skip(1))
 {
+    var nextCounts = new Dictionary<int, long>();
+    var splitters = line
+        .Select((c, i) => (c, i))
+        .Where(x => x.c == '^')
+        .Select(x => x.i)
+        .ToHashSet();
 
-    var nextIndexes = new HashSet<int>();
-    var indexesOfHat = line
-      .Select((c, i) => (c, i))
-      .Where(x => x.c == '^')
-      .Select(x => x.i);
-    foreach (int index in currentIndexes)
+    foreach (var kv in currentCounts)
     {
-        if (indexesOfHat.Contains(index))
+        int index = kv.Key;
+        long count = kv.Value;
+
+        if (splitters.Contains(index))
         {
-            splitCount++;
-            nextIndexes.Add(index + 1);
-            nextIndexes.Add(index - 1);
+            // Particle splits: add count to both left and right positions
+            nextCounts[index - 1] = nextCounts.GetValueOrDefault(index - 1) + count;
+            nextCounts[index + 1] = nextCounts.GetValueOrDefault(index + 1) + count;
         }
         else
         {
-            nextIndexes.Add(index);
+            // Particle continues straight down
+            nextCounts[index] = nextCounts.GetValueOrDefault(index) + count;
         }
     }
-    currentIndexes = nextIndexes;
+
+    currentCounts = nextCounts;
 }
 
-Console.WriteLine(splitCount);
+// Total timelines = sum of counts at the bottom row
+long totalTimelines = currentCounts.Values.Sum();
+Console.WriteLine(totalTimelines);
