@@ -17,9 +17,9 @@ foreach (var line in lines.Skip(1))
       .Select((c, i) => (c, i))
       .Where(x => x.c == '^')
       .Select(x => x.i);
-    foreach (int index in indexesOfHat)
+    foreach (int index in currentIndexes)
     {
-        if (currentIndexes.Contains(index))
+        if (indexesOfHat.Contains(index))
         {
             splitCount++;
             nextIndexes.Add(index + 1);
