@@ -1,40 +1,81 @@
-// Read all points from file
-var lines = File.ReadAllLines("data.txt");
-var points = lines
-    .Select(l => l.Split(','))
-    .Select(p => new Point(long.Parse(p[0]), long.Parse(p[1])))
-    .ToList();
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Numerics;
 
-long maxArea = 0;
-Point cornerA = default, cornerB = default;
-
-// Brute-force all pairs
-for (int i = 0; i < points.Count; i++)
+class Program
 {
-    for (int j = i + 1; j < points.Count; j++)
+    record Rectangle(long top, long left, long bottom, long right);
+
+    static void Main()
     {
-        long area = CalculateArea(points[i], points[j]);
-        if (area > maxArea)
-        {
-            maxArea = area;
-            cornerA = points[i];
-            cornerB = points[j];
-        }
+        var input = File.ReadAllText("data.txt").Trim();
+        
+        Console.WriteLine($"Part One: {PartOne(input)}");
+        Console.WriteLine($"Part Two: {PartTwo(input)}");
+    }
+
+    static object PartOne(string input)
+    {
+        var points = Parse(input);
+        return (
+             from r in RectanglesOrderedByArea(points)
+             select Area(r)
+         ).First();
+    }
+
+    static object PartTwo(string input)
+    {
+        var points = Parse(input);
+        var segments = Boundary(points).ToArray();
+        // AabbCollision enables rectangles inside or outside the
+        // shape, but the input is set up in a way that big rectangles
+        // are all inside, so this loop will find the correct one for actual
+        // problems.
+        return (
+             from r in RectanglesOrderedByArea(points)
+             where segments.All(s => !AabbCollision(r, s))
+             select Area(r)
+         ).First();
+    }
+
+    static IEnumerable<Rectangle> RectanglesOrderedByArea(Complex[] points) =>
+        from p1 in points
+        from p2 in points
+        let r = RectangleFromPoints(p1, p2)
+        orderby Area(r) descending
+        select r;
+
+    static IEnumerable<Rectangle> Boundary(Complex[] corners) =>
+        from pair in corners.Zip(corners.Prepend(corners.Last()))
+        select RectangleFromPoints(pair.First, pair.Second);
+
+    static Rectangle RectangleFromPoints(Complex p1, Complex p2)
+    {
+        var top = Math.Min(p1.Imaginary, p2.Imaginary);
+        var bottom = Math.Max(p1.Imaginary, p2.Imaginary);
+        var left = Math.Min(p1.Real, p2.Real);
+        var right = Math.Max(p1.Real, p2.Real);
+        return new Rectangle((long)top, (long)left, (long)bottom, (long)right);
+    }
+
+    static Complex[] Parse(string input) => (
+        from line in input.Split("\n")
+        where !string.IsNullOrWhiteSpace(line)
+        let parts = line.Split(",").Select(int.Parse).ToArray()
+        select parts[0] + Complex.ImaginaryOne * parts[1]
+    ).ToArray();
+
+    static long Area(Rectangle r) => (r.bottom - r.top + 1) * (r.right - r.left + 1);
+
+    // see https://kishimotostudios.com/articles/aabb_collision/
+    static bool AabbCollision(Rectangle a, Rectangle b)
+    {
+        var aIsToTheLeft = a.right <= b.left;
+        var aIsToTheRight = a.left >= b.right;
+        var aIsAbove = a.bottom <= b.top;
+        var aIsBelow = a.top >= b.bottom;
+        return !(aIsToTheRight || aIsToTheLeft || aIsAbove || aIsBelow);
     }
 }
-
-Console.WriteLine($"Max Area: {maxArea}");
-Console.WriteLine($"Corners: ({cornerA.X},{cornerA.Y}) and ({cornerB.X},{cornerB.Y})");
-
-static long CalculateArea(Point a, Point b)
-{
-    long width = Math.Abs(a.X - b.X) + 1L;
-    long height = Math.Abs(a.Y - b.Y) + 1L;
-    return width * height;
-}
-
-public struct Point
-{
-    public long X, Y;
-    public Point(long x, long y) { X = x; Y = y; }
-};
